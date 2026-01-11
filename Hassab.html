@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR System | Daewoo Kot Addu</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { --sidebar-w: 260px; --primary: #1e3a8a; --primary-light: #3b82f6; --dark: #0f172a; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; }
+        body { background: #f8fafc; font-family: 'Segoe UI', sans-serif; font-size: 14px; overflow-x: hidden; }
+        
+        /* Sidebar Styling */
+        .sidebar { 
+            width: var(--sidebar-w); 
+            height: 100vh; 
+            background: linear-gradient(180deg, var(--dark) 0%, #1e293b 100%); 
+            color: white; 
+            position: fixed; 
+            left: -260px; 
+            top: 0;
+            z-index: 1000; 
+            box-shadow: 4px 0 15px rgba(0,0,0,0.1); 
+            transition: 0.4s;
+        }
+        .sidebar.active { left: 0; }
+        .nav-link { color: #cbd5e1; padding: 14px 25px; cursor: pointer; display: flex; align-items: center; text-decoration: none; transition: 0.3s; border-left: 4px solid transparent; }
+        .nav-link:hover, .nav-link.active { background: rgba(255,255,255,0.1); color: white; border-left-color: var(--warning); }
+        .nav-link i { width: 25px; text-align: center; }
+
+        .main-content { margin-left: 0; padding: 20px; transition: 0.4s; }
+        .main-content.pushed { margin-left: var(--sidebar-w); }
+        
+        .menu-btn { font-size: 1.5rem; cursor: pointer; color: var(--primary); margin-right: 15px; border: none; background: none; }
+        .card-custom { background: white; border-radius: 12px; border: none; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); padding: 25px; margin-bottom: 25px; }
+        .section-title { background: #f1f5f9; padding: 10px 15px; border-radius: 6px; font-weight: 700; color: var(--primary); margin: 25px 0 15px 0; border-left: 5px solid var(--primary); }
+        
+        .cat-card { background: white; border-radius: 12px; border: 1px solid #e2e8f0; transition: 0.3s; cursor: pointer; height: 100%; position: relative; overflow: hidden; }
+        .cat-card:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(0,0,0,0.1); border-color: var(--primary-light); }
+        .cat-header { background: var(--primary); color: white; padding: 12px; font-weight: bold; text-align: center; text-transform: uppercase; font-size: 0.85rem; }
+        .cat-body { padding: 20px; display: flex; justify-content: space-around; align-items: center; }
+        .stat-box h3 { margin: 0; font-weight: 800; font-size: 2rem; }
+        .text-active { color: var(--success); }
+        .text-resigned { color: var(--danger); }
+
+        .btn-quick-add { background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); color: white; border: none; padding: 15px; border-radius: 12px; width: 100%; text-align: left; transition: 0.3s; position: relative; overflow: hidden; }
+        .btn-quick-add:hover { transform: scale(1.02); box-shadow: 0 10px 20px rgba(30, 58, 138, 0.3); }
+        .btn-quick-add i { font-size: 2rem; opacity: 0.8; position: absolute; right: 20px; top: 50%; transform: translateY(-50%); }
+
+        .signature-container { margin-top: 50px; background: white; border-radius: 12px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border-top: 5px solid var(--primary); }
+        .company-header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #f1f5f9; padding-bottom: 20px; }
+        .company-header h2 { color: var(--primary); font-weight: 900; letter-spacing: 1px; text-transform: uppercase; margin: 0; font-size: 1.8rem; }
+        .signature-box { text-align: center; padding: 20px; }
+        .signature-line { border-bottom: 2px solid #000; width: 80%; margin: 0 auto 10px auto; }
+        .sign-name { font-weight: bold; font-size: 1.1rem; text-transform: uppercase; margin-bottom: 2px; color: var(--dark); }
+        .sign-title { font-size: 0.9rem; color: #64748b; font-weight: 600; }
+
+        .live-clock { font-size: 1.2rem; font-weight: bold; color: var(--dark); background: #e2e8f0; padding: 5px 15px; border-radius: 20px; display: inline-block; }
+        .edit-mode { border: 2px solid var(--warning) !important; }
+
+        /* Vehicle History Styling */
+        .history-list { list-style: none; padding: 0; margin-top: 10px; max-height: 150px; overflow-y: auto; }
+        .history-item { background: #fff3cd; border-left: 3px solid #ffc107; padding: 5px 10px; margin-bottom: 5px; font-size: 0.85rem; border-radius: 4px; }
+
+        /* Search Modal Styling */
+        .modal-header-custom { background: var(--primary); color: white; border-top-left-radius: 10px; border-top-right-radius: 10px; }
+        .profile-row { display: flex; border-bottom: 1px solid #eee; padding: 8px 0; }
+        .profile-label { width: 40%; font-weight: bold; color: #64748b; }
+        .profile-val { width: 60%; color: var(--dark); font-weight: 600; }
+    </style>
+</head>
+<body onload="startTime()">
+
+<div class="sidebar" id="sidebar">
+    <div class="p-4 text-center border-bottom border-secondary mb-3">
+        <div class="d-flex justify-content-end mb-2">
+            <button class="btn btn-sm text-white" onclick="toggleSidebar()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="mb-2"><i class="fas fa-user-shield fa-2x text-warning"></i></div>
+        <h4 class="text-white fw-bold mb-0">BUKHARI HR</h4>
+        <small class="text-info">2026 Admin Panel</small>
+    </div>
+    <div class="nav flex-column px-2">
+        <a class="nav-link active" onclick="showSection('dashboard'); toggleSidebar()"><i class="fas fa-chart-pie me-3"></i> Dashboard</a>
+        <a class="nav-link" onclick="openRegistration(); toggleSidebar()"><i class="fas fa-user-plus me-3"></i> Registration</a>
+        <div class="text-muted small fw-bold px-3 mt-3 mb-2">EMPLOYEE LISTS</div>
+        <a class="nav-link" onclick="loadTable('Daewoo Employee'); toggleSidebar()"><i class="fas fa-building me-3"></i> Daewoo Staff</a>
+        <a class="nav-link" onclick="loadTable('MC Worker'); toggleSidebar()"><i class="fas fa-broom me-3"></i> MC Workers</a>
+        <a class="nav-link" onclick="loadTable('Contractor'); toggleSidebar()"><i class="fas fa-users-cog me-3"></i> Contractors</a>
+        <a class="nav-link" onclick="loadTable('Rental Driver'); toggleSidebar()"><i class="fas fa-truck-pickup me-3"></i> Rental/Machine</a>
+        <div class="text-muted small fw-bold px-3 mt-3 mb-2">SYSTEM</div>
+        <a class="nav-link" onclick="backupData()"><i class="fas fa-database me-3"></i> Backup Data</a>
+    </div>
+</div>
+
+<div class="main-content" id="mainContent">
+    
+    <header class="d-flex justify-content-between align-items-center mb-4 bg-white p-3 rounded shadow-sm">
+        <div class="d-flex align-items-center">
+            <button class="menu-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+            <div>
+                <h4 class="mb-0 fw-bold text-dark">HR DASHBOARD</h4>
+                <small class="text-muted">Daewoo Waste Management Company</small>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <div id="clockDisplay" class="live-clock shadow-sm">--:--:--</div>
+            <input type="text" id="globalSearch" class="form-control shadow-sm d-none d-md-block" placeholder="🔍 Search Full CNIC..." style="width: 200px; border-radius: 20px;" onkeyup="instantSearch(this.value)">
+        </div>
+    </header>
+
+    <div id="dashboardSection">
+        <div class="row g-4 mb-4">
+            <div class="col-md-4">
+                <button onclick="openRegistration()" class="btn-quick-add h-100">
+                    <h4 class="mb-1">New Entry</h4>
+                    <small>Register a new employee</small>
+                    <i class="fas fa-plus-circle"></i>
+                </button>
+            </div>
+            <div class="col-md-4">
+                <div class="card-custom h-100 d-flex align-items-center justify-content-center bg-white p-3">
+                    <div class="text-center">
+                        <h1 class="text-primary fw-bold mb-0" id="totalActiveCount">0</h1>
+                        <small class="text-muted fw-bold text-uppercase">Total Active Workforce</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card-custom h-100 p-3 d-flex flex-column justify-content-center">
+                    <div class="d-grid gap-2">
+                         <button class="btn btn-outline-success btn-sm" onclick="document.getElementById('bulkInput').click()"><i class="fas fa-file-excel me-2"></i> Bulk Upload CSV</button>
+                         <input type="file" id="bulkInput" class="d-none" accept=".csv" onchange="handleBulkImport()">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4" id="statCards"></div>
+
+        <div class="signature-container">
+            <div class="company-header">
+                <h2>Daewoo Waste Management Company Kot Addu</h2>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="signature-box">
+                        <div style="height: 60px;"></div>
+                        <div class="signature-line"></div>
+                        <div class="sign-name">Mujeeb Ul Rheman</div>
+                        <div class="sign-title">Assistant Manager HR</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="signature-box">
+                        <div style="height: 60px;"></div>
+                        <div class="signature-line"></div>
+                        <div class="sign-name">Syed Hassan Raza</div>
+                        <div class="sign-title">HR Officer</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="formSection" class="d-none">
+        <div class="card-custom" id="formCard">
+            <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+                <h4 id="formTitle" class="fw-bold text-primary"><i class="fas fa-user-edit me-2"></i> New Registration</h4>
+                <button class="btn btn-light text-danger fw-bold" onclick="showSection('dashboard')"><i class="fas fa-times me-2"></i> Close</button>
+            </div>
+            <form id="hrForm" class="row g-3">
+                <input type="hidden" id="editId">
+                <div class="col-12"><div class="section-title">PERSONAL INFORMATION</div></div>
+                <div class="col-md-3">
+                    <label class="form-label">Category</label>
+                    <select id="category" class="form-select bg-light" onchange="toggleFormFields()" required>
+                        <option value="Daewoo Employee">Daewoo Staff</option>
+                        <option value="MC Worker">MC Worker</option>
+                        <option value="Contractor">Contractor</option>
+                        <option value="Rental Driver">Rental/Machine</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Work Type</label>
+                    <select id="EmpType" class="form-select">
+                        <option value="Manual Sweeping">Manual Sweeping</option>
+                        <option value="Desalting">Desalting</option>
+                        <option value="DTD">DTD</option>
+                        <option value="Commercial Area">Commercial Area</option>
+                        <option value="Dumping site">Dumping site</option>
+                        <option value="Office Staff">Office Staff</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="col-md-3"><label class="form-label">Full Name</label><input type="text" id="Employee" class="form-control" required></div>
+                <div class="col-md-3"><label class="form-label">CNIC</label><input type="text" id="CNIC" class="form-control" required maxlength="13"></div>
+                
+                <div class="col-md-3"><label class="form-label">Father Name</label><input type="text" id="FatherName" class="form-control"></div>
+                <div class="col-md-3"><label class="form-label">Mobile No</label><input type="text" id="Mobile" class="form-control"></div>
+                <div class="col-md-3"><label class="form-label">DOB</label><input type="date" id="DOB" class="form-control"></div>
+                <div class="col-md-3"><label class="form-label">Address</label><input type="text" id="Address" class="form-control"></div>
+
+                <div class="col-12"><div class="section-title">JOB DETAILS</div></div>
+                <div class="col-md-3"><label class="form-label">Designation</label><input type="text" id="Designation" class="form-control"></div>
+                <div class="col-md-3"><label class="form-label">Joining Date</label><input type="date" id="DOJ" class="form-control"></div>
+                <div class="col-md-2"><label class="form-label">UC</label><input type="text" id="UC" class="form-control"></div>
+                <div class="col-md-2"><label class="form-label">Point</label><input type="text" id="Attendance" class="form-control"></div>
+                <div class="col-md-2"><label class="form-label">Shift</label><select id="Shift" class="form-select"><option>Day</option><option>Night</option></select></div>
+                
+                <div class="col-md-4"><label class="form-label">Bank Name</label><input type="text" id="Bank" class="form-control"></div>
+                <div class="col-md-4"><label class="form-label">Account No</label><input type="text" id="Account" class="form-control"></div>
+                <div class="col-md-4"><label class="form-label">Status</label>
+                    <select id="Status" class="form-select" onchange="toggleLWD()">
+                        <option value="Active">Active</option>
+                        <option value="Resigned">Resigned</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-none" id="lwdTab"><label class="form-label text-danger">Resignation Date</label><input type="date" id="LWD" class="form-control"></div>
+
+                <div class="col-12 rental-fields d-none">
+                    <div class="section-title text-danger">MACHINE/VEHICLE</div>
+                </div>
+                <div class="col-md-6 rental-fields d-none">
+                    <label class="form-label">Machine Name</label>
+                    <input type="text" id="MachineName" class="form-control">
+                </div>
+                <div class="col-md-6 rental-fields d-none">
+                    <label class="form-label">Vehicle No <small class="text-muted">(Change updates history)</small></label>
+                    <input type="text" id="VehicleNo" class="form-control">
+                    <div id="vehicleHistoryLog" class="mt-2"></div>
+                </div>
+
+                <div class="col-12 text-end mt-4 border-top pt-3">
+                    <button type="button" class="btn btn-secondary me-2" onclick="showSection('dashboard')">Cancel</button>
+                    <button type="submit" id="submitBtn" class="btn btn-primary px-5 fw-bold">Save Record</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="listSection" class="d-none">
+        <div class="card-custom">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4 id="tableTitle" class="fw-bold text-primary mb-0">List</h4>
+                <div class="d-flex gap-2">
+                    <select id="statusFilter" class="form-select form-select-sm" onchange="filterListByStatus()" style="width: 150px;">
+                        <option value="All">All Status</option>
+                        <option value="Active">Active Only</option>
+                        <option value="Resigned">Resigned Only</option>
+                    </select>
+                    <button class="btn btn-danger btn-sm" onclick="exportFilteredPDF()"><i class="fas fa-file-pdf"></i> PDF</button>
+                    <button class="btn btn-success btn-sm" onclick="exportFilteredExcel()"><i class="fas fa-file-excel"></i> Excel</button>
+                    <input type="text" id="search" class="form-control form-control-sm" placeholder="Search..." onkeyup="filterTable()" style="width: 150px;">
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-dark" id="dynamicHead"></thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="profileModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header modal-header-custom">
+                <h5 class="modal-title fw-bold"><i class="fas fa-id-card me-2"></i> Employee Profile</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="text-center mb-4">
+                    <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center border border-3 border-primary" style="width: 100px; height: 100px;">
+                        <i class="fas fa-user fa-3x text-secondary"></i>
+                    </div>
+                    <h3 class="mt-3 fw-bold text-dark" id="modalName">Name Here</h3>
+                    <span class="badge bg-primary rounded-pill px-3 py-2" id="modalCat">Category</span>
+                    <span class="badge bg-success rounded-pill px-3 py-2" id="modalStatus">Active</span>
+                </div>
+                
+                <div class="row">
+                    <div class="col-12">
+                        <div class="profile-row"><div class="profile-label">CNIC:</div><div class="profile-val text-primary" id="modalCNIC" style="font-family:monospace; font-size:1.1rem;">-</div></div>
+                        <div class="profile-row"><div class="profile-label">Designation:</div><div class="profile-val" id="modalDesig">-</div></div>
+                        <div class="profile-row"><div class="profile-label">Mobile:</div><div class="profile-val" id="modalMobile">-</div></div>
+                        <div class="profile-row"><div class="profile-label">Vehicle:</div><div class="profile-val text-danger" id="modalVehicle">-</div></div>
+                        <div class="profile-row"><div class="profile-label">Joining:</div><div class="profile-val" id="modalDOJ">-</div></div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-warning d-flex align-items-center mt-3 d-none" id="modalResignAlert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <div><strong>Resigned On:</strong> <span id="modalLWD"></span></div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="modalEditBtn">Edit Record</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    let db;
+    let currentCat = "";
+    let currentEditingVehicle = ""; // To track changes
+    let existingHistory = []; // To store current history during edit
+    const DB_NAME = "HR_Final_Pro_v2";
+    const request = indexedDB.open(DB_NAME, 2); // Increased version for schema update support
+
+    function startTime() {
+        const today = new Date();
+        const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+        document.getElementById('clockDisplay').innerHTML = today.toLocaleDateString('en-US', options);
+        setTimeout(startTime, 1000);
+    }
+
+    function toggleSidebar() {
+        document.getElementById("sidebar").classList.toggle("active");
+        document.getElementById("mainContent").classList.toggle("pushed");
+    }
+
+    request.onupgradeneeded = e => {
+        db = e.target.result;
+        if (!db.objectStoreNames.contains("workers")) {
+            db.createObjectStore("workers", { keyPath: "id", autoIncrement: true });
+        }
+    };
+
+    request.onsuccess = e => { db = e.target.result; updateStats(); };
+
+    function showSection(id) {
+        ['dashboard', 'form', 'list'].forEach(s => document.getElementById(s + 'Section').classList.add('d-none'));
+        document.getElementById(id + 'Section').classList.remove('d-none');
+    }
+
+    function openRegistration() {
+        document.getElementById('hrForm').reset();
+        document.getElementById('editId').value = "";
+        document.getElementById('formTitle').innerText = "New Registration";
+        document.getElementById('submitBtn').innerText = "Save Record";
+        document.getElementById('formCard').classList.remove('edit-mode');
+        document.getElementById('vehicleHistoryLog').innerHTML = ""; // Clear history
+        currentEditingVehicle = "";
+        existingHistory = [];
+        toggleFormFields();
+        toggleLWD();
+        showSection('form');
+    }
+
+    function toggleFormFields() {
+        const cat = document.getElementById('category').value;
+        document.querySelectorAll('.rental-fields').forEach(el => el.classList.toggle('d-none', cat !== 'Rental Driver'));
+    }
+
+    function toggleLWD() {
+        document.getElementById('lwdTab').classList.toggle('d-none', document.getElementById('Status').value !== 'Resigned');
+    }
+
+    document.getElementById('hrForm').onsubmit = async function(e) {
+        e.preventDefault();
+        const editId = document.getElementById('editId').value;
+        const cnicInput = document.getElementById('CNIC').value.trim();
+        const category = document.getElementById('category').value;
+        const newVehicle = document.getElementById('VehicleNo').value.trim();
+        
+        // --- HISTORY LOGIC ---
+        let history = existingHistory || [];
+        // Only add history if it's a Rental Driver, it's an Edit, and vehicle changed
+        if (category === "Rental Driver" && editId && currentEditingVehicle !== "" && currentEditingVehicle !== newVehicle) {
+            const entry = {
+                from: currentEditingVehicle,
+                to: newVehicle,
+                date: new Date().toLocaleDateString()
+            };
+            history.push(entry);
+        }
+        // ---------------------
+
+        const data = {
+            category: category,
+            EmpType: document.getElementById('EmpType').value,
+            Employee: document.getElementById('Employee').value,
+            FatherName: document.getElementById('FatherName').value,
+            CNIC: cnicInput,
+            DOB: document.getElementById('DOB').value,
+            Mobile: document.getElementById('Mobile').value,
+            Address: document.getElementById('Address').value,
+            Designation: document.getElementById('Designation').value,
+            DOJ: document.getElementById('DOJ').value,
+            Shift: document.getElementById('Shift').value,
+            UC: document.getElementById('UC').value,
+            Attendance: document.getElementById('Attendance').value,
+            Bank: document.getElementById('Bank').value,
+            Account: document.getElementById('Account').value,
+            Status: document.getElementById('Status').value,
+            LWD: document.getElementById('LWD').value,
+            MachineName: document.getElementById('MachineName').value.trim(),
+            VehicleNo: newVehicle,
+            transferHistory: history, // Save the array
+            timestamp: new Date().toISOString()
+        };
+
+        const tx = db.transaction("workers", "readonly");
+        const all = await new Promise(r => tx.objectStore("workers").getAll().onsuccess = e => r(e.target.result));
+
+        if(cnicInput.length === 13) {
+            const duplicate = all.find(w => w.CNIC === cnicInput && w.id != editId);
+            if(duplicate) {
+                alert(`Warning! CNIC ${cnicInput} already exists.`);
+                return;
+            }
+        }
+
+        const writeTx = db.transaction("workers", "readwrite");
+        if(editId) {
+            data.id = parseInt(editId);
+            writeTx.objectStore("workers").put(data);
+        } else {
+            writeTx.objectStore("workers").add(data);
+        }
+
+        writeTx.oncomplete = () => {
+            alert("Saved!");
+            updateStats();
+            showSection('dashboard');
+        };
+    };
+
+    function updateStats() {
+        db.transaction("workers", "readonly").objectStore("workers").getAll().onsuccess = e => {
+            const all = e.target.result;
+            document.getElementById('totalActiveCount').innerText = all.filter(w => w.Status === 'Active').length;
+            const cats = ['Daewoo Employee', 'MC Worker', 'Contractor', 'Rental Driver'];
+            let html = '';
+            cats.forEach(c => {
+                const act = all.filter(w => w.category === c && w.Status === 'Active').length;
+                const res = all.filter(w => w.category === c && w.Status === 'Resigned').length;
+                html += `
+                <div class="col-md-3" onclick="loadTable('${c}')">
+                    <div class="cat-card">
+                        <div class="cat-header">${c}</div>
+                        <div class="cat-body">
+                            <div class="stat-box"><h3 class="text-active">${act}</h3><small>Active</small></div>
+                            <div class="stat-box border-start ps-3"><h3 class="text-resigned">${res}</h3><small>Resigned</small></div>
+                        </div>
+                    </div>
+                </div>`;
+            });
+            document.getElementById('statCards').innerHTML = html;
+        };
+    }
+
+    function loadTable(cat) {
+        currentCat = cat;
+        document.getElementById('statusFilter').value = "All";
+        showSection('list');
+        document.getElementById('tableTitle').innerText = cat;
+        renderTableData("All");
+    }
+
+    function filterListByStatus() {
+        renderTableData(document.getElementById('statusFilter').value);
+    }
+
+    function renderTableData(statusFilter) {
+        const head = document.getElementById('dynamicHead');
+        const body = document.getElementById('tableBody');
+        head.innerHTML = `<tr><th>Name</th><th>Type</th><th>CNIC</th><th>Designation</th><th>Status</th><th>Action</th></tr>`;
+        
+        db.transaction("workers", "readonly").objectStore("workers").getAll().onsuccess = e => {
+            body.innerHTML = '';
+            let filtered = e.target.result.filter(w => w.category === currentCat);
+            if(statusFilter !== "All") filtered = filtered.filter(w => w.Status === statusFilter);
+
+            filtered.forEach(w => {
+                body.innerHTML += `<tr>
+                    <td><b>${w.Employee}</b></td>
+                    <td><small>${w.EmpType || 'N/A'}</small></td>
+                    <td>${w.CNIC}</td>
+                    <td>${w.Designation}</td>
+                    <td><span class="badge ${w.Status==='Active'?'bg-success':'bg-danger'}">${w.Status}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" onclick="editRec(${w.id})"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteRec(${w.id})"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>`;
+            });
+        };
+    }
+
+    function editRec(id) {
+        db.transaction("workers", "readonly").objectStore("workers").get(id).onsuccess = e => {
+            const w = e.target.result;
+            showSection('form');
+            document.getElementById('editId').value = w.id;
+            document.getElementById('formTitle').innerText = "Edit: " + w.Employee;
+            document.getElementById('formCard').classList.add('edit-mode');
+            
+            // Populate Fields
+            document.getElementById('category').value = w.category;
+            document.getElementById('EmpType').value = w.EmpType || "Other";
+            document.getElementById('Employee').value = w.Employee;
+            document.getElementById('CNIC').value = w.CNIC;
+            document.getElementById('FatherName').value = w.FatherName;
+            document.getElementById('Mobile').value = w.Mobile;
+            document.getElementById('DOB').value = w.DOB;
+            document.getElementById('Address').value = w.Address;
+            document.getElementById('Designation').value = w.Designation;
+            document.getElementById('DOJ').value = w.DOJ;
+            document.getElementById('Shift').value = w.Shift;
+            document.getElementById('UC').value = w.UC;
+            document.getElementById('Attendance').value = w.Attendance;
+            document.getElementById('Bank').value = w.Bank;
+            document.getElementById('Account').value = w.Account;
+            document.getElementById('Status').value = w.Status;
+            document.getElementById('LWD').value = w.LWD;
+            document.getElementById('MachineName').value = w.MachineName || "";
+            document.getElementById('VehicleNo').value = w.VehicleNo || "";
+            
+            // --- VEHICLE HISTORY HANDLING ---
+            currentEditingVehicle = w.VehicleNo || ""; // Save initial value
+            existingHistory = w.transferHistory || []; // Load existing array
+            
+            const historyDiv = document.getElementById('vehicleHistoryLog');
+            historyDiv.innerHTML = "";
+            if(w.category === 'Rental Driver' && existingHistory.length > 0) {
+                let ul = '<ul class="history-list">';
+                // Show in reverse order (newest on top)
+                [...existingHistory].reverse().forEach(h => {
+                    ul += `<li class="history-item"><i class="fas fa-exchange-alt me-2"></i> Transferred from <strong>${h.from}</strong> to <strong>${h.to}</strong> <span class="float-end text-muted small">${h.date}</span></li>`;
+                });
+                ul += '</ul>';
+                historyDiv.innerHTML = '<small class="fw-bold text-dark">Transfer History:</small>' + ul;
+            }
+            // --------------------------------
+
+            toggleFormFields();
+            toggleLWD();
+        };
+    }
+
+    // --- NEW: ADVANCED SEARCH ---
+    function instantSearch(val) {
+        if(val.length < 13) return;
+        db.transaction("workers", "readonly").objectStore("workers").getAll().onsuccess = e => {
+            const found = e.target.result.find(w => w.CNIC === val);
+            if(found) {
+                // Populate Modal
+                document.getElementById('modalName').innerText = found.Employee;
+                document.getElementById('modalCat').innerText = found.category;
+                const statusBadge = document.getElementById('modalStatus');
+                statusBadge.innerText = found.Status;
+                statusBadge.className = found.Status === 'Active' ? 'badge bg-success rounded-pill px-3 py-2' : 'badge bg-danger rounded-pill px-3 py-2';
+                
+                document.getElementById('modalCNIC').innerText = found.CNIC;
+                document.getElementById('modalDesig').innerText = found.Designation || 'N/A';
+                document.getElementById('modalMobile').innerText = found.Mobile || 'N/A';
+                document.getElementById('modalVehicle').innerText = found.VehicleNo || 'N/A';
+                document.getElementById('modalDOJ').innerText = found.DOJ || 'N/A';
+                
+                // Show resignation alert if applicable
+                if(found.Status === 'Resigned') {
+                    document.getElementById('modalResignAlert').classList.remove('d-none');
+                    document.getElementById('modalLWD').innerText = found.LWD || 'Unknown';
+                } else {
+                    document.getElementById('modalResignAlert').classList.add('d-none');
+                }
+
+                // Setup Edit Button in Modal
+                const editBtn = document.getElementById('modalEditBtn');
+                editBtn.onclick = function() {
+                    bootstrap.Modal.getInstance(document.getElementById('profileModal')).hide();
+                    editRec(found.id);
+                };
+
+                // Show Modal
+                new bootstrap.Modal(document.getElementById('profileModal')).show();
+            }
+        };
+    }
+
+    function backupData() {
+        db.transaction("workers", "readonly").objectStore("workers").getAll().onsuccess = e => {
+            const data = JSON.stringify(e.target.result);
+            const blob = new Blob([data], {type: "application/json"});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `HR_Backup_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+        };
+    }
+
+    function exportFilteredExcel() {
+        const status = document.getElementById('statusFilter').value;
+        db.transaction("workers", "readonly").objectStore("workers").getAll().onsuccess = e => {
+            let data = e.target.result.filter(w => w.category === currentCat);
+            if(status !== "All") data = data.filter(w => w.Status === status);
+            const csv = Papa.unparse(data);
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `${currentCat}_${status}_Report.csv`;
+            a.click();
+        };
+    }
+
+    function exportFilteredPDF() {
+        const { jsPDF } = window.jspdf;
+        const status = document.getElementById('statusFilter').value;
+        const doc = new jsPDF('l', 'mm', 'a4');
+        doc.text(`Daewoo Waste Management - ${currentCat} (${status})`, 14, 15);
+        db.transaction("workers", "readonly").objectStore("workers").getAll().onsuccess = e => {
+            let data = e.target.result.filter(w => w.category === currentCat);
+            if(status !== "All") data = data.filter(w => w.Status === status);
+            const rows = data.map(w => [w.Employee, w.EmpType, w.CNIC, w.Designation, w.Status]);
+            doc.autoTable({ head: [['Name', 'Type', 'CNIC', 'Designation', 'Status']], body: rows, startY: 20 });
+            doc.save(`${currentCat}_List.pdf`);
+        };
+    }
+
+    function deleteRec(id) { 
+        if(confirm("Delete permanently?")) { 
+            db.transaction("workers", "readwrite").objectStore("workers").delete(id); 
+            updateStats(); 
+            loadTable(currentCat); 
+        } 
+    }
+    
+    function filterTable() { 
+        const q = document.getElementById('search').value.toLowerCase(); 
+        document.querySelectorAll('#tableBody tr').forEach(tr => tr.style.display = tr.innerText.toLowerCase().includes(q) ? '' : 'none'); 
+    }
+</script>
+</body>
+</html>
