@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bukhari HR Management System - DWMC Kot Addu</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --sidebar-w: 280px; --primary: #1e3a8a; --accent: #3b82f6; --dark: #0f172a; }
+        body { background: #f1f5f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow-x: hidden; }
+        
+        /* Login Page */
+        #loginPage { position: fixed; inset: 0; background: linear-gradient(135deg, var(--dark), var(--primary)); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        .login-card { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); width: 380px; text-align: center; }
+        
+        /* Sidebar */
+        .sidebar { width: var(--sidebar-w); height: 100vh; background: var(--dark); color: white; position: fixed; transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1); z-index: 1000; left: 0; }
+        .sidebar.hidden { left: calc(-1 * var(--sidebar-w)); }
+        .main-content { margin-left: var(--sidebar-w); transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1); padding: 25px; min-height: 100vh; }
+        .main-content.expanded { margin-left: 0; }
+        
+        .user-box { padding: 30px 20px; border-bottom: 1px solid #1e293b; text-align: center; }
+        .user-box img { width: 100px; height: 100px; border-radius: 50%; border: 4px solid var(--accent); object-fit: cover; margin-bottom: 15px; }
+        
+        .nav-link { color: #94a3b8; padding: 12px 20px; border-radius: 10px; margin: 4px 15px; cursor: pointer; display: flex; align-items: center; transition: 0.3s; text-decoration: none; }
+        .nav-link:hover, .nav-link.active { background: var(--primary); color: white; }
+        .nav-link i { width: 25px; }
+
+        /* Dashboard Cards */
+        .card-custom { background: white; border-radius: 15px; border: none; box-shadow: 0 5px 15px rgba(0,0,0,0.05); padding: 20px; margin-bottom: 20px; }
+        .stat-card { border-top: 4px solid var(--accent); transition: 0.3s; }
+        .stat-card:hover { transform: translateY(-5px); }
+
+        /* Status Badges */
+        .badge-active { background: #dcfce7; color: #15803d; border-radius: 6px; padding: 5px 12px; font-weight: 600; }
+        .badge-resigned { background: #fee2e2; color: #b91c1c; border-radius: 6px; padding: 5px 12px; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+<div id="loginPage">
+    <div class="login-card">
+        <h2 class="mb-2">Bukhari HR</h2>
+        <p class="text-muted mb-4">Management System Login</p>
+        <input type="text" id="username" class="form-control mb-3 py-2" placeholder="User Name">
+        <input type="password" id="password" class="form-control mb-4 py-2" placeholder="Password">
+        <button class="btn btn-primary w-100 py-2 shadow" onclick="login()">Login to Dashboard</button>
+        <div class="mt-4 small text-muted">Developed by Syed Hassan Raza</div>
+    </div>
+</div>
+
+<div class="sidebar shadow" id="sidebar">
+    <div class="user-box">
+        <img src="https://i.imgur.com/K4zR6uR.jpeg" alt="Syed Hassan Raza">
+        <h5 class="mb-0 text-white">Syed Hassan Raza</h5>
+        <small class="text-info">HR Administrator</small>
+    </div>
+    <div class="nav flex-column mt-3">
+        <a class="nav-link active" onclick="showSection('dashboard')"><i class="fas fa-home"></i> Dashboard</a>
+        <a class="nav-link" onclick="showSection('form')"><i class="fas fa-user-plus"></i> New Registration</a>
+        <a class="nav-link" onclick="loadTable('Daewoo Employee')"><i class="fas fa-building"></i> Daewoo Staff</a>
+        <a class="nav-link" onclick="loadTable('MC Worker')"><i class="fas fa-broom"></i> MC Workers</a>
+        <a class="nav-link" onclick="loadTable('Contractor')"><i class="fas fa-user-shield"></i> Contractors</a>
+        <a class="nav-link" onclick="loadTable('Rental Driver')"><i class="fas fa-truck-pickup"></i> Rental Drivers</a>
+        <hr class="mx-3 border-secondary">
+        <a class="nav-link text-danger" onclick="location.reload()"><i class="fas fa-power-off"></i> Logout</a>
+    </div>
+</div>
+
+<div class="main-content" id="mainContent">
+    <header class="d-flex justify-content-between align-items-center mb-4 card-custom">
+        <button class="btn btn-outline-dark border-0" onclick="toggleSidebar()"><i class="fas fa-bars fa-lg"></i></button>
+        <div class="text-center">
+            <h3 class="mb-0 fw-bold">HR DATA MANAGEMENT SYSTEM</h3>
+            <span class="text-muted">Daewoo Waste Management Company Kot Addu</span>
+        </div>
+        <div style="width: 40px;"></div>
+    </header>
+
+    <div id="dashboardSection">
+        <div class="row g-4" id="statCards">
+            </div>
+        
+        <div class="card-custom mt-4 text-center py-5">
+            <h4>Welcome to Bukhari HR Portal</h4>
+            <p class="text-muted">Manage your employee database, track vehicles, and generate reports efficiently.</p>
+            <div class="d-flex justify-content-center gap-2">
+                <button class="btn btn-primary" onclick="showSection('form')">Add New Employee</button>
+                <input type="file" id="bulkCsv" class="d-none" onchange="handleBulkUpload(this)" accept=".csv">
+                <button class="btn btn-success" onclick="document.getElementById('bulkCsv').click()">Bulk CSV Upload</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="formSection" class="d-none">
+        <div class="card-custom">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4>Registration Form</h4>
+                <button class="btn btn-sm btn-secondary" onclick="showSection('dashboard')">Back</button>
+            </div>
+            <form id="hrForm" class="row g-3">
+                <input type="hidden" id="editId">
+                <div class="col-md-3">
+                    <label class="form-label">Category</label>
+                    <select id="type" class="form-select" onchange="toggleFormFields()">
+                        <option value="Daewoo Employee">Daewoo Employee</option>
+                        <option value="MC Worker">MC Worker</option>
+                        <option value="Contractor">Contractor (3rd Party)</option>
+                        <option value="Rental Driver">Rental Driver</option>
+                    </select>
+                </div>
+                <div class="col-md-3"><label class="form-label">Full Name</label><input type="text" id="name" class="form-control" required></div>
+                <div class="col-md-3"><label class="form-label">Father Name</label><input type="text" id="fName" class="form-control"></div>
+                <div class="col-md-3"><label class="form-label">CNIC</label><input type="text" id="cnic" class="form-control"></div>
+                
+                <div class="col-md-3"><label class="form-label">Date of Birth</label><input type="date" id="dob" class="form-control"></div>
+                <div class="col-md-3"><label class="form-label">DOJ (Joining Date)</label><input type="date" id="doj" class="form-control"></div>
+                <div class="col-md-3"><label class="form-label">CNIC Expiry</label><input type="date" id="expiry" class="form-control"></div>
+                <div class="col-md-3"><label class="form-label">Mobile No</label><input type="text" id="mobile" class="form-control"></div>
+
+                <div class="col-md-3 rental-only d-none"><label class="form-label">Vehicle Name</label><input type="text" id="vName" class="form-control"></div>
+                <div class="col-md-3 rental-only d-none"><label class="form-label">Vehicle Number</label><input type="text" id="vNo" class="form-control"></div>
+                
+                <div class="col-md-3 field-only"><label class="form-label">UC Name</label><input type="text" id="uc" class="form-control"></div>
+                <div class="col-md-3 field-only"><label class="form-label">Attendance Point</label><input type="text" id="ap" class="form-control"></div>
+                <div class="col-md-3 field-only">
+                    <label class="form-label">Shift</label>
+                    <select id="shift" class="form-select"><option>Day</option><option>Night</option></select>
+                </div>
+
+                <div class="col-md-3"><label class="form-label">Employee ID</label><input type="text" id="empId" class="form-control"></div>
+                <div class="col-md-3">
+                    <label class="form-label">Bank Name</label>
+                    <select id="bank" class="form-select">
+                        <option>JS Zindigi</option><option>HBL</option><option>UBL</option><option>NBP</option><option>MCB</option><option>Allied</option>
+                    </select>
+                </div>
+                <div class="col-md-3"><label class="form-label">Account No</label><input type="text" id="acc" class="form-control"></div>
+                <div class="col-md-3">
+                    <label class="form-label">Status</label>
+                    <select id="status" class="form-select" onchange="toggleResignDate()">
+                        <option value="Active">Active</option>
+                        <option value="Resigned">Resigned</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-none" id="resignDiv"><label class="form-label">Last Date</label><input type="date" id="lastDate" class="form-control"></div>
+                <div class="col-md-9"><label class="form-label">Address</label><input type="text" id="address" class="form-control"></div>
+
+                <div class="col-12 mt-4">
+                    <button type="submit" class="btn btn-primary px-5 shadow">Save Record</button>
+                    <button type="reset" class="btn btn-light ms-2">Reset</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="listSection" class="d-none">
+        <div class="card-custom">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4 id="tableTitle">Employee Records</h4>
+                <div>
+                    <button class="btn btn-outline-success btn-sm" onclick="exportExcel()"><i class="fas fa-file-csv"></i> CSV</button>
+                    <button class="btn btn-outline-danger btn-sm" onclick="exportCategoryPDF()"><i class="fas fa-file-pdf"></i> PDF</button>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Employee Details</th>
+                            <th>CNIC / ID</th>
+                            <th>Work Area / Veh</th>
+                            <th>Status</th>
+                            <th>Tenure</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let db = JSON.parse(localStorage.getItem('dwmc_bukhari_db')) || [];
+    let currentCat = "";
+
+    // 1. Core Auth & UI
+    function login() {
+        if(document.getElementById('username').value && document.getElementById('password').value) {
+            document.getElementById('loginPage').style.display = 'none';
+            updateStats();
+        } else alert("Credentials enter karein!");
+    }
+
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('hidden');
+        document.getElementById('mainContent').classList.toggle('expanded');
+    }
+
+    function showSection(id) {
+        ['dashboard', 'form', 'list'].forEach(s => document.getElementById(s + 'Section').classList.add('d-none'));
+        document.getElementById(id + 'Section').classList.remove('d-none');
+        if(id === 'dashboard') updateStats();
+    }
+
+    function toggleFormFields() {
+        const type = document.getElementById('type').value;
+        document.querySelectorAll('.rental-only').forEach(el => el.classList.toggle('d-none', type !== 'Rental Driver'));
+        document.querySelectorAll('.field-only').forEach(el => el.classList.toggle('d-none', type === 'Daewoo Employee'));
+    }
+
+    function toggleResignDate() {
+        document.getElementById('resignDiv').classList.toggle('d-none', document.getElementById('status').value !== 'Resigned');
+    }
+
+    // 2. Tenure & Calculations
+    function getTenure(start, end) {
+        if(!start) return "N/A";
+        const s = new Date(start);
+        const e = end ? new Date(end) : new Date();
+        let y = e.getFullYear() - s.getFullYear();
+        let m = e.getMonth() - s.getMonth();
+        if(m < 0) { y--; m += 12; }
+        return `${y}y ${m}m`;
+    }
+
+    // 3. Database Operations
+    document.getElementById('hrForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const eid = document.getElementById('editId').value;
+        const type = document.getElementById('type').value;
+        const vNo = document.getElementById('vNo').value;
+        const status = document.getElementById('status').value;
+
+        // Vehicle Validation
+        if(type === 'Rental Driver' && status === 'Active' && vNo) {
+            const conflict = db.find(r => r.vNo === vNo && r.status === 'Active' && r.id != eid);
+            if(conflict) return alert(`Error: Gari ${vNo} par Driver ${conflict.name} pehle se assign hai!`);
+        }
+
+        const data = {
+            id: eid ? parseInt(eid) : Date.now(),
+            type, status,
+            name: document.getElementById('name').value,
+            fName: document.getElementById('fName').value,
+            cnic: document.getElementById('cnic').value,
+            dob: document.getElementById('dob').value,
+            doj: document.getElementById('doj').value,
+            mobile: document.getElementById('mobile').value,
+            vName: document.getElementById('vName').value,
+            vNo,
+            uc: document.getElementById('uc').value,
+            ap: document.getElementById('ap').value,
+            shift: document.getElementById('shift').value,
+            empId: document.getElementById('empId').value,
+            bank: document.getElementById('bank').value,
+            acc: document.getElementById('acc').value,
+            lastDate: document.getElementById('lastDate').value,
+            address: document.getElementById('address').value
+        };
+
+        if(eid) db[db.findIndex(r => r.id == eid)] = data;
+        else db.push(data);
+
+        localStorage.setItem('dwmc_bukhari_db', JSON.stringify(db));
+        alert("Record Saved!");
+        this.reset();
+        showSection('dashboard');
+    });
+
+    function updateStats() {
+        const categories = ['Daewoo Employee', 'MC Worker', 'Contractor', 'Rental Driver'];
+        let html = '';
+        categories.forEach(cat => {
+            const total = db.filter(r => r.type === cat).length;
+            const active = db.filter(r => r.type === cat && r.status === 'Active').length;
+            html += `
+                <div class="col-md-3">
+                    <div class="card-custom stat-card">
+                        <small class="text-muted">${cat}</small>
+                        <h2 class="fw-bold">${total}</h2>
+                        <div class="d-flex justify-content-between small">
+                            <span class="text-success">Active: ${active}</span>
+                            <span class="text-danger">Resigned: ${total - active}</span>
+                        </div>
+                    </div>
+                </div>`;
+        });
+        document.getElementById('statCards').innerHTML = html;
+    }
+
+    function loadTable(cat) {
+        currentCat = cat;
+        document.getElementById('tableTitle').innerText = cat + " Records";
+        showSection('list');
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+        
+        db.filter(r => r.type === cat).forEach(r => {
+            tbody.innerHTML += `
+                <tr>
+                    <td><strong>${r.name}</strong><br><small class="text-muted">S/O: ${r.fName}</small></td>
+                    <td>${r.cnic}<br><small>ID: ${r.empId}</small></td>
+                    <td>${r.vNo || r.uc || 'N/A'}<br><small>${r.shift || ''}</small></td>
+                    <td><span class="${r.status==='Active'?'badge-active':'badge-resigned'}">${r.status}</span></td>
+                    <td>${getTenure(r.doj, r.lastDate)}</td>
+                    <td>
+                        <button class="btn btn-sm btn-light" onclick="downloadProfile(${r.id})"><i class="fas fa-file-pdf text-danger"></i></button>
+                        <button class="btn btn-sm btn-light" onclick="editRecord(${r.id})"><i class="fas fa-edit text-primary"></i></button>
+                        <button class="btn btn-sm btn-light" onclick="deleteRecord(${r.id})"><i class="fas fa-trash text-danger"></i></button>
+                    </td>
+                </tr>`;
+        });
+    }
+
+    function handleBulkUpload(input) {
+        Papa.parse(input.files[0], {
+            header: true,
+            complete: function(results) {
+                results.data.forEach(row => {
+                    if(row.Name) db.push({...row, id: Date.now() + Math.random()});
+                });
+                localStorage.setItem('dwmc_bukhari_db', JSON.stringify(db));
+                alert("Bulk Import Successful!");
+                location.reload();
+            }
+        });
+    }
+
+    function downloadProfile(id) {
+        const r = db.find(x => x.id == id);
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.setFontSize(20);
+        doc.text("WORKER SERVICE PROFILE", 105, 20, {align: 'center'});
+        doc.setFontSize(10);
+        doc.text("Daewoo Waste Management Company - Kot Addu", 105, 28, {align: 'center'});
+        
+        doc.autoTable({
+            startY: 40,
+            body: [
+                ['Name', r.name], ['Father Name', r.fName], ['CNIC', r.cnic],
+                ['Category', r.type], ['Employee ID', r.empId],
+                ['Status', r.status], ['Tenure', getTenure(r.doj, r.lastDate)],
+                ['Bank', r.bank], ['Account Number', r.acc]
+            ],
+            theme: 'grid'
+        });
+        doc.save(`${r.name}_Profile.pdf`);
+    }
+
+    function editRecord(id) {
+        const r = db.find(x => x.id == id);
+        showSection('form');
+        document.getElementById('editId').value = r.id;
+        document.getElementById('name').value = r.name;
+        document.getElementById('type').value = r.type;
+        toggleFormFields();
+        // fill other fields...
+    }
+
+    function deleteRecord(id) {
+        if(confirm("Confirm Delete?")) {
+            db = db.filter(x => x.id != id);
+            localStorage.setItem('dwmc_bukhari_db', JSON.stringify(db));
+            loadTable(currentCat);
+        }
+    }
+</script>
+</body>
+</html>
